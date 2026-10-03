@@ -1,0 +1,8 @@
+SQLite chapter 4 | rowid mapping
+SQLite 3.51.1 | in-memory database
+vector_index is a minimal stand-in for posts_vss; no vector extension is loaded
+-------------------------------------------------------------------
+operation              posts.id   index ID     linked
+before                        1          1       True
+INSERT OR REPLACE             2          1      False
+UPSERT                        1          1       True

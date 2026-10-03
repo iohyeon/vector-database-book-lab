@@ -1,0 +1,110 @@
+[
+  {
+    "id": "refund-policy",
+    "title": "Refund policy",
+    "category": "returns",
+    "paragraphs": [
+      "Customers may request a refund within 30 days of delivery. The original payment method is credited after the returned item passes inspection.",
+      "Start a return from the order details page. A prepaid shipping label is available for eligible orders, and the refund normally appears within five business days after inspection."
+    ]
+  },
+  {
+    "id": "refund-status",
+    "title": "Check refund status",
+    "category": "returns",
+    "paragraphs": [
+      "The order details page shows whether a return was requested, received, inspected, or refunded.",
+      "If a refund is marked complete but the credit is missing, contact the card issuer with the refund reference number."
+    ]
+  },
+  {
+    "id": "damaged-item",
+    "title": "Damaged item on arrival",
+    "category": "returns",
+    "paragraphs": [
+      "Report a broken or defective item within seven days of delivery and include clear photos of the product and packaging.",
+      "After review, support can arrange a replacement or a refund without charging return shipping."
+    ]
+  },
+  {
+    "id": "size-exchange",
+    "title": "Exchange an item for another size",
+    "category": "returns",
+    "paragraphs": [
+      "An unused clothing item can be exchanged for another size within 30 days when the requested size is in stock.",
+      "Choose Exchange on the order details page and print the supplied label. The replacement ships after the original item is received."
+    ]
+  },
+  {
+    "id": "cancel-order",
+    "title": "Cancel an order before shipment",
+    "category": "orders",
+    "paragraphs": [
+      "An order can be cancelled from its details page until the warehouse begins packing it.",
+      "Once shipment starts, use the return process after delivery. A cancellation confirmation is sent by email."
+    ]
+  },
+  {
+    "id": "change-address",
+    "title": "Change a delivery address",
+    "category": "orders",
+    "paragraphs": [
+      "Edit the delivery address on the order details page before the warehouse starts packing.",
+      "After dispatch, the carrier may offer a delivery redirect. Address changes are unavailable for some international orders."
+    ]
+  },
+  {
+    "id": "tracking",
+    "title": "Track a shipment",
+    "category": "shipping",
+    "paragraphs": [
+      "A tracking number appears in the order details page once the parcel leaves the warehouse.",
+      "Carrier scans may take several hours to appear. Use the tracking link in the dispatch email for the latest delivery estimate."
+    ]
+  },
+  {
+    "id": "delivery-delay",
+    "title": "Late delivery",
+    "category": "shipping",
+    "paragraphs": [
+      "Weather, customs checks, or carrier congestion can delay a parcel beyond the estimated delivery date.",
+      "If tracking has not changed for five business days, contact support with the order number so the team can open a carrier investigation."
+    ]
+  },
+  {
+    "id": "invoice",
+    "title": "Download an invoice",
+    "category": "billing",
+    "paragraphs": [
+      "Download a PDF invoice from the Billing section of an order after payment has settled.",
+      "The invoice includes the order date, items, tax, and payment total. Business customers can update company details before downloading it."
+    ]
+  },
+  {
+    "id": "payment-failure",
+    "title": "Payment did not go through",
+    "category": "billing",
+    "paragraphs": [
+      "A bank may decline a card charge because of insufficient funds, an expired card, or an authentication check.",
+      "Verify the card details and try again. If the bank still declines the transaction, contact the bank or choose another payment method."
+    ]
+  },
+  {
+    "id": "payment-method",
+    "title": "Update a saved payment method",
+    "category": "billing",
+    "paragraphs": [
+      "Add or remove a saved card from the Payment methods section of account settings.",
+      "Changing a saved card affects future purchases only. Completed orders continue to show their original payment method."
+    ]
+  },
+  {
+    "id": "password-reset",
+    "title": "Reset an account password",
+    "category": "account",
+    "paragraphs": [
+      "Use the Forgot password link on the sign-in page to request a one-time reset email.",
+      "The reset link expires after 30 minutes. If no email arrives, check the spam folder and confirm the account address."
+    ]
+  }
+]

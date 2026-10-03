@@ -1,0 +1,24 @@
+PostgreSQL + pgvector | semantic support search
+Model: sentence-transformers/all-MiniLM-L6-v2 (ONNX, 384 dimensions)
+Indexed: 12 articles / 24 chunks
+Index: exact scan (small corpus)
+------------------------------------------------------------------------
+Query: "I want my money back."
+Category filter: none
+Keyword matches: 0
+  1. Check refund status [returns] cosine=0.388
+     The order details page shows whether a return was requested, received, inspected, or refunded.
+  2. Refund policy [returns] cosine=0.379
+     Start a return from the order details page. A prepaid shipping label is available for eligible orders, and the refund normally appears within five business days after inspection.
+  3. Damaged item on arrival [returns] cosine=0.348
+     After review, support can arrange a replacement or a refund without charging return shipping.
+------------------------------------------------------------------------
+Query: "Where can I get a receipt for my order?"
+Category filter: billing
+Keyword matches: 0
+  1. Download an invoice [billing] cosine=0.557
+     Download a PDF invoice from the Billing section of an order after payment has settled.
+  2. Download an invoice [billing] cosine=0.514
+     The invoice includes the order date, items, tax, and payment total. Business customers can update company details before downloading it.
+  3. Update a saved payment method [billing] cosine=0.195
+     Changing a saved card affects future purchases only. Completed orders continue to show their original payment method.
