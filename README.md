@@ -8,6 +8,8 @@
 
 ## 실행한 시스템
 
+![문서 임베딩부터 근거 청크 검색까지의 흐름](diagrams/rag-search-flow.png)
+
 ```text
 직접 작성한 고객 지원 문서 12개
         ↓ 문단 단위로 분리
@@ -56,9 +58,11 @@ PostgreSQL 컨테이너는 **127.0.0.1:55443**에만 열립니다. `compose.yaml
 
 ## pgvector 검색 결과
 
+![단어 일치와 의미 검색의 차이](diagrams/semantic-search.png)
+
 사용한 모델은 책에도 등장하는 `sentence-transformers/all-MiniLM-L6-v2`입니다. 이 저장소에서는 가벼운 ONNX 실행기인 FastEmbed로 같은 384차원 모델을 사용했습니다. 문서 제목과 문단을 임베딩해 `vector(384)` 컬럼에 저장하고, 질문도 같은 모델로 임베딩했습니다. PostgreSQL에서 `embedding <=> query_vector`로 코사인 거리를 정렬했습니다. 카테고리는 같은 SQL의 `WHERE` 조건으로 처리합니다.
 
-![실제 pgvector CLI 실행 결과](results/pgvector_terminal.png)
+![pgvector 의미 검색의 실제 터미널 실행 화면](results/pgvector_terminal.png)
 
 [원본 CLI 출력](results/pgvector_terminal.txt) · [DB 확인 출력](results/database_check.txt) · [예제 문서](data/support_articles.json)
 
@@ -79,26 +83,28 @@ PostgreSQL 컨테이너는 **127.0.0.1:55443**에만 열립니다. `compose.yaml
 
 3장의 FAISS 예제를 바탕으로, 균등 난수 `float32` 벡터 **1만 개(64차원)**와 질문 **100개**를 만들었습니다. 모든 벡터를 비교하는 Flat의 상위 5개를 정답으로 놓고 `recall@5`를 계산했습니다. 지연 시간은 CPU 스레드 하나에서 단일 질문을 처리한 시간을 3회 측정한 중앙값입니다.
 
-![실제 FAISS CLI 실행 결과](results/faiss_terminal.png)
+![FAISS 검색 재현율과 지연 시간의 실제 터미널 실행 화면](results/faiss_terminal.png)
 
 [원본 CLI 출력](results/faiss_terminal.txt)
 
 | 설정 | recall@5 | 질의당 시간 |
 |---|---:|---:|
-| Flat 정확 검색 | 1.000 | 0.2853ms |
-| IVF `nprobe=1` | 0.078 | 0.0242ms |
-| IVF `nprobe=16` | 0.574 | 0.1006ms |
-| IVF `nprobe=100` | 1.000 | 0.4387ms |
-| HNSW `efSearch=8` | 0.380 | 0.0526ms |
-| HNSW `efSearch=128` | 0.952 | 0.2959ms |
+| Flat 정확 검색 | 1.000 | 0.1549ms |
+| IVF `nprobe=1` | 0.078 | 0.0132ms |
+| IVF `nprobe=16` | 0.574 | 0.0406ms |
+| IVF `nprobe=100` | 1.000 | 0.1862ms |
+| HNSW `efSearch=8` | 0.380 | 0.0275ms |
+| HNSW `efSearch=128` | 0.952 | 0.1673ms |
 
 탐색 범위를 넓히면 재현율이 오르지만 시간도 늘었습니다. 이 실행에서는 재현율을 높인 HNSW가 Flat보다 빠르지 않았습니다. 작은 데이터에서 ANN이 반드시 이득이라는 뜻은 아니라는 점을 보여 줍니다. 다만 **균등 난수 벡터는 실제 문장 임베딩이 아니며**, 질의 시간은 장비 상태에 따라 달라집니다. 서비스용 결론은 실제 데이터와 질문으로 다시 측정해야 합니다.
 
 ## SQLite: 원본과 인덱스의 ID 연결
 
+![INSERT OR REPLACE와 UPSERT의 ID 연결 차이](diagrams/sqlite-id-link.png)
+
 4장의 `posts`–`posts_vss` 연결 문제를 두 개의 일반 SQLite 테이블로 **최소 재현**했습니다. 벡터 확장은 설치하지 않았고 유사도 검색도 실행하지 않았습니다. `vector_index`는 인덱스 쪽 ID만 보여 주는 대역 테이블입니다.
 
-![실제 SQLite CLI 실행 결과](results/sqlite_terminal.png)
+![SQLite 원본과 인덱스 ID 연결의 실제 터미널 실행 화면](results/sqlite_terminal.png)
 
 [원본 CLI 출력](results/sqlite_terminal.txt)
 

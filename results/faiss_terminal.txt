@@ -4,11 +4,11 @@ seed=20261003, vectors=10000, dimensions=64, queries=100, k=5
 data=uniform random float32; latency=median of 3 runs, single-query ms
 ----------------------------------------------------------------
 index / setting             recall@5     ms/query
-Flat (exact)                   1.000       0.2853
-IVF nprobe=1                   0.078       0.0242
-IVF nprobe=4                   0.222       0.0354
-IVF nprobe=16                  0.574       0.1006
-IVF nprobe=100                 1.000       0.4387
-HNSW efSearch=8                0.380       0.0526
-HNSW efSearch=32               0.700       0.1088
-HNSW efSearch=128              0.952       0.2959
+Flat (exact)                   1.000       0.1549
+IVF nprobe=1                   0.078       0.0132
+IVF nprobe=4                   0.222       0.0210
+IVF nprobe=16                  0.574       0.0406
+IVF nprobe=100                 1.000       0.1862
+HNSW efSearch=8                0.380       0.0275
+HNSW efSearch=32               0.700       0.0507
+HNSW efSearch=128              0.952       0.1673
