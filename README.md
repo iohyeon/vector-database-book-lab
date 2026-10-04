@@ -1,45 +1,50 @@
-# 『벡터 데이터베이스』 실습: FAISS에서 pgvector 검색까지
+# vector-search-experiments
 
-『벡터 데이터베이스』를 읽고 **벡터 검색의 정확도·속도 교환 관계**, **원본과 인덱스의 ID 연결**, **실제 문장 임베딩을 저장한 의미 검색**을 CLI에서 확인한 기록입니다.
+『벡터 데이터베이스』 3~5장에서 다루는 검색 문제를 FAISS, SQLite, PostgreSQL/pgvector로 각각 확인한 실험입니다. 근사 검색의 재현율과 시간, 원본과 인덱스의 ID 연결, 문장 임베딩을 이용한 의미 검색을 실행 가능한 코드와 원본 출력으로 기록했습니다.
 
-1. 근사 검색을 빠르게 하면 정확한 이웃을 얼마나 놓치는가?
-2. 원본 행의 ID가 바뀌면 검색 인덱스와의 연결은 어떻게 되는가?
-3. 질문과 문서의 단어가 달라도 관련 문서를 찾을 수 있는가?
+## 핵심 결과
 
-## 실행한 시스템
+| 실험 | 데이터와 방법 | 확인한 결과 |
+|---|---|---|
+| FAISS | 난수 벡터 10,000개(64차원), 질의 100개 | IVF `nprobe=1`의 recall@5는 0.078, `nprobe=100`은 1.000. 질의 시간은 0.0132ms에서 0.1862ms로 증가 |
+| SQLite | 원본 테이블과 인덱스 ID를 대신하는 일반 테이블 | `INSERT OR REPLACE` 후 원본 ID는 1→2, 인덱스 ID는 1에 남음. UPSERT는 ID 1을 유지 |
+| pgvector | 직접 작성한 고객 지원 문서 12개, 청크 24개 | 엄격한 키워드 비교가 0건인 두 질문에서 관련 청크를 벡터 검색 상위에 반환 |
 
-![문서 임베딩부터 근거 청크 검색까지의 흐름](diagrams/rag-search-flow.png)
+FAISS 지연 시간은 이 PC에서 한 번 실행해 얻은 값입니다. 장비 상태와 데이터에 따라 달라지며, 서비스 성능을 대표하지 않습니다. 전체 출력은 각 실험 아래에 연결했습니다.
 
-```text
-직접 작성한 고객 지원 문서 12개
-        ↓ 문단 단위로 분리
-텍스트 청크 24개
-        ↓ all-MiniLM-L6-v2 임베딩 (384차원)
-PostgreSQL + pgvector
-        ↓ 코사인 거리 검색 + SQL 카테고리 필터
-관련 청크와 원본 문서 제목 반환
+수치를 확인하려면 아래 **실행 방법의 명령**을 같은 순서로 실행하고, 각 절의 원본 출력과 비교하면 됩니다. FAISS 로그에는 라이브러리 버전·난수 시드·벡터 수·측정 방식이, SQLite 로그에는 확장 대신 사용한 대역 테이블과 ID 변화가, pgvector 로그에는 질문·필터·키워드 건수·상위 청크가 남아 있습니다. 표와 다이어그램은 이 출력을 읽기 쉽게 정리한 것이며, 검색 관련성을 평가하는 정답 데이터셋은 아직 없습니다.
+
+## 실험 구성
+
+세 실험은 서로 독립적입니다. pgvector 실험의 문서 검색 경로는 다음과 같습니다.
+
+```mermaid
+flowchart TB
+    D["고객 지원 문서 12개"] --> C["문단 청크 24개"]
+    C --> M["all-MiniLM-L6-v2 임베딩 · 384차원"]
+    M --> P[("PostgreSQL + pgvector")]
+    Q["질문"] --> QM["같은 모델로 임베딩"]
+    QM --> S["코사인 거리 검색 + 카테고리 조건"]
+    P --> S
+    S --> R["관련 청크와 원본 문서 제목"]
 ```
 
-**범위:** 5장의 논문 검색 구조를 축소한 **의미 검색 실습**입니다. LLM 답변 생성은 포함하지 않았습니다. 고객 지원 문서는 실습용 예제 데이터입니다.
+책 5장의 논문 검색 구조를 작은 고객 지원 문서로 축소한 **의미 검색** 실험입니다. LLM 답변 생성은 포함하지 않습니다. 더 큰 논문 검색 구현은 [pgvector-arxiv-search](https://github.com/iohyeon/pgvector-arxiv-search)에 있습니다.
 
-| 실습 | 책과 연결되는 지점 | 확인한 것 |
-|---|---|---|
-| [FAISS 비교](experiments/faiss_recall.py) | 3장 인덱스와 ANN | 탐색 범위에 따른 recall@5·질의 시간 |
-| [SQLite ID 연결](experiments/sqlite_rowid.py) | 4장 이중 테이블 구조 | `INSERT OR REPLACE`와 UPSERT의 ID 차이 |
-| [pgvector 의미 검색](experiments/pgvector_search.py) | 5장 PostgreSQL 검색 | 실제 임베딩 저장·코사인 검색·메타데이터 필터 |
+## 실행 방법
 
-## 직접 실행하기
-
-필요한 것: **Docker**, **Python 3.11**, [uv](https://docs.astral.sh/uv/). 아래 명령은 저장소 루트에서 실행합니다. 처음 실행할 때 임베딩 모델 파일 약 90MB를 받습니다. Docker 이미지는 `pgvector/pgvector:pg15`입니다.
+필요한 것: Docker, Python 3.11, [uv](https://docs.astral.sh/uv/). 첫 실행에서는 임베딩 모델 파일을 내려받습니다. 명령은 저장소 루트에서 실행합니다.
 
 ```bash
 uv venv --python 3.11 .venv
 uv pip install --python .venv/bin/python -r requirements.txt
 docker compose up -d --wait
 .venv/bin/python experiments/pgvector_search.py demo
+.venv/bin/python experiments/faiss_recall.py
+.venv/bin/python experiments/sqlite_rowid.py
 ```
 
-질문과 카테고리를 바꿔 검색할 수도 있습니다.
+질문과 카테고리를 바꿔 검색하려면 다음 명령을 사용합니다.
 
 ```bash
 .venv/bin/python experiments/pgvector_search.py search \
@@ -47,45 +52,13 @@ docker compose up -d --wait
   --category billing
 ```
 
-나머지 두 실습은 DB 서버 없이 실행됩니다.
+PostgreSQL은 `127.0.0.1:55443`에만 열립니다. `compose.yaml`의 계정은 로컬 실습용입니다. `demo`는 전용 DB의 예제 문서를 다시 색인합니다. 종료할 때는 `docker compose down`을 실행합니다.
 
-```bash
-.venv/bin/python experiments/faiss_recall.py
-.venv/bin/python experiments/sqlite_rowid.py
-```
+## FAISS: 속도와 재현율
 
-PostgreSQL 컨테이너는 **127.0.0.1:55443**에만 열립니다. `compose.yaml`의 계정과 비밀번호는 이 로컬 실습 전용입니다. 실행 후 컨테이너를 중지하려면 `docker compose down`을 사용합니다. 데이터 볼륨은 남으므로 다음 실행에서 다시 사용할 수 있습니다. `demo` 명령은 이 전용 DB의 예제 문서를 다시 색인해 같은 상태로 만듭니다.
+[실험 코드](experiments/faiss_recall.py) · [원본 실행 출력](results/faiss_terminal.txt)
 
-## pgvector 검색 결과
-
-![단어 일치와 의미 검색의 차이](diagrams/semantic-search.png)
-
-사용한 모델은 책에도 등장하는 `sentence-transformers/all-MiniLM-L6-v2`입니다. 이 저장소에서는 가벼운 ONNX 실행기인 FastEmbed로 같은 384차원 모델을 사용했습니다. 문서 제목과 문단을 임베딩해 `vector(384)` 컬럼에 저장하고, 질문도 같은 모델로 임베딩했습니다. PostgreSQL에서 `embedding <=> query_vector`로 코사인 거리를 정렬했습니다. 카테고리는 같은 SQL의 `WHERE` 조건으로 처리합니다.
-
-![pgvector 의미 검색의 실제 터미널 실행 화면](results/pgvector_terminal.png)
-
-[원본 CLI 출력](results/pgvector_terminal.txt) · [DB 확인 출력](results/database_check.txt) · [예제 문서](data/support_articles.json)
-
-실행 환경에서 확인한 DB 상태는 `pgvector 0.8.7`, 문서 **12개**, 청크 **24개**였습니다.
-
-| 질문 | 키워드 검색 | pgvector 상위 결과 |
-|---|---|---|
-| `I want my money back.` | 0건 | `Check refund status` 0.388, `Refund policy` 0.379, `Damaged item on arrival` 0.348 |
-| `Where can I get a receipt for my order?` + `billing` 필터 | 0건 | `Download an invoice` 0.557, 같은 문서의 다른 청크 0.514 |
-
-키워드 기준은 PostgreSQL `plainto_tsquery('english', ...)`의 **모든 단어를 요구하는 방식**입니다. 따라서 0건이라는 결과는 이 비교 방식의 결과이지, 모든 키워드 검색 방식이 실패한다는 뜻은 아닙니다. 벡터 검색은 질문의 `money back`과 문서의 `refund`, 질문의 `receipt`와 문서의 `invoice`처럼 표현이 다른 경우에도 관련 문서를 상위에 올렸습니다.
-
-한 문서의 두 청크가 상위에 함께 나온 점도 관찰할 수 있습니다. 사용자 화면에서 문서 목록을 보여 주려면 `article_id`별로 결과를 묶고 대표 점수를 정해야 합니다. 이 실습은 검색된 **청크**를 그대로 보여 주어 그 차이를 드러냈습니다. 코사인 점수 0.557은 ‘55.7% 정답’이라는 확률이 아니며, 모델이나 자료가 바뀌면 고정 임곗값으로 해석하기 어렵습니다.
-
-문서가 24청크뿐이라 pgvector에는 HNSW 인덱스를 만들지 않았습니다. 전체를 비교하는 정확 검색이 이 규모에 맞습니다. 데이터가 커지면 `EXPLAIN`과 검색 재현율을 함께 확인하며 ANN 인덱스를 검토해야 합니다.
-
-## FAISS: 빠른 검색과 놓친 정답
-
-3장의 FAISS 예제를 바탕으로, 균등 난수 `float32` 벡터 **1만 개(64차원)**와 질문 **100개**를 만들었습니다. 모든 벡터를 비교하는 Flat의 상위 5개를 정답으로 놓고 `recall@5`를 계산했습니다. 지연 시간은 CPU 스레드 하나에서 단일 질문을 처리한 시간을 3회 측정한 중앙값입니다.
-
-![FAISS 검색 재현율과 지연 시간의 실제 터미널 실행 화면](results/faiss_terminal.png)
-
-[원본 CLI 출력](results/faiss_terminal.txt)
+Flat의 상위 5개를 정답으로 놓고 IVF와 HNSW의 `recall@5`를 계산했습니다. 질의 시간은 CPU 스레드 하나에서 단일 질문을 처리한 시간을 세 번 측정한 중앙값입니다.
 
 | 설정 | recall@5 | 질의당 시간 |
 |---|---:|---:|
@@ -96,16 +69,34 @@ PostgreSQL 컨테이너는 **127.0.0.1:55443**에만 열립니다. `compose.yaml
 | HNSW `efSearch=8` | 0.380 | 0.0275ms |
 | HNSW `efSearch=128` | 0.952 | 0.1673ms |
 
-탐색 범위를 넓히면 재현율이 오르지만 시간도 늘었습니다. 이 실행에서는 재현율을 높인 HNSW가 Flat보다 빠르지 않았습니다. 작은 데이터에서 ANN이 반드시 이득이라는 뜻은 아니라는 점을 보여 줍니다. 다만 **균등 난수 벡터는 실제 문장 임베딩이 아니며**, 질의 시간은 장비 상태에 따라 달라집니다. 서비스용 결론은 실제 데이터와 질문으로 다시 측정해야 합니다.
+탐색 범위를 넓히면 재현율과 처리 시간이 함께 올랐습니다. 이 규모에서는 높은 재현율로 설정한 HNSW가 Flat보다 빠르지 않았습니다. 입력은 **실제 문장 임베딩이 아닌 균등 난수 벡터**이므로, 검색 품질과 서비스 지연을 판단하려면 실제 데이터로 다시 측정해야 합니다.
 
 ## SQLite: 원본과 인덱스의 ID 연결
 
-![INSERT OR REPLACE와 UPSERT의 ID 연결 차이](diagrams/sqlite-id-link.png)
+[실험 코드](experiments/sqlite_rowid.py) · [원본 실행 출력](results/sqlite_terminal.txt)
 
-4장의 `posts`–`posts_vss` 연결 문제를 두 개의 일반 SQLite 테이블로 **최소 재현**했습니다. 벡터 확장은 설치하지 않았고 유사도 검색도 실행하지 않았습니다. `vector_index`는 인덱스 쪽 ID만 보여 주는 대역 테이블입니다.
+```mermaid
+flowchart TB
+    A["초기: posts.id = 1, 인덱스 ID = 1"]
+    A --> R["INSERT OR REPLACE"]
+    A --> U["ON CONFLICT DO UPDATE"]
+    R --> B["posts.id = 2, 인덱스 ID = 1 · 연결 끊김"]
+    U --> C["posts.id = 1, 인덱스 ID = 1 · 연결 유지"]
+```
 
-![SQLite 원본과 인덱스 ID 연결의 실제 터미널 실행 화면](results/sqlite_terminal.png)
+책 4장의 `posts`와 `posts_vss` 연결 문제를 일반 SQLite 테이블 두 개로 최소 재현했습니다. `vector_index`는 인덱스 ID만 보여 주는 대역 테이블입니다. **`sqlite-vss` 확장이나 벡터 검색은 실행하지 않았습니다.** 실제 시스템에서는 원본과 인덱스를 같은 트랜잭션에서 갱신해야 합니다.
 
-[원본 CLI 출력](results/sqlite_terminal.txt)
+## pgvector: 표현이 달라도 관련 문서를 찾는가
 
-같은 `post_id`에 `INSERT OR REPLACE`를 사용하자 원본 ID는 1에서 2로 바뀌고 인덱스 ID는 1에 남았습니다. `ON CONFLICT DO UPDATE`를 사용하면 원본 ID가 유지됩니다. 실제 시스템에서는 원본과 벡터 인덱스 갱신을 같은 트랜잭션으로 묶어 연결을 지켜야 합니다.
+[실험 코드](experiments/pgvector_search.py) · [원본 실행 출력](results/pgvector_terminal.txt) · [DB 확인 출력](results/database_check.txt) · [예제 문서](data/support_articles.json)
+
+FastEmbed의 ONNX 실행기로 `all-MiniLM-L6-v2` 모델을 사용해 문서와 질문을 같은 384차원 공간에 임베딩했습니다. `vector(384)` 컬럼을 코사인 거리로 정렬하고 카테고리는 같은 SQL의 `WHERE` 조건으로 처리합니다. 실행 당시 pgvector 버전은 0.8.7이었습니다.
+
+| 질문 | 키워드 비교 | 벡터 검색 상위 결과 |
+|---|---|---|
+| `I want my money back.` | 0건 | `Check refund status` 0.388, `Refund policy` 0.379, `Damaged item on arrival` 0.348 |
+| `Where can I get a receipt for my order?` + `billing` 필터 | 0건 | `Download an invoice`의 두 청크 0.557, 0.514 |
+
+키워드 기준은 `plainto_tsquery('english', ...)`로 입력 단어를 모두 요구하는 비교입니다. 모든 키워드 검색 방식이 실패한다는 뜻은 아닙니다. 코사인 점수도 정답 확률이 아닙니다. 두 번째 질문처럼 같은 문서의 청크가 여러 번 나올 수 있어, 사용자에게 문서 목록을 보여 줄 때는 문서 ID별로 결과를 묶어야 합니다.
+
+24청크에서는 ANN 인덱스를 만들지 않았습니다. 이 규모에서는 모든 청크를 비교하는 정확 검색을 사용했고, 데이터가 커지면 실행 계획과 검색 재현율을 함께 보며 HNSW를 검토해야 합니다.
